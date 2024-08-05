@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate CSV</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #ffcc80;
+            padding-top: 30px;
+            color: #333;
+        }
+        .container {
+            background: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+        }
+        .btn-custom {
+            background-color: #ff7043;
+            color: white;
+            margin-top: 20px;
+            width: 100%;
+            border-radius: 5px;
+        }
+        .btn-custom:hover {
+            background-color: #ff8a65;
+        }
+        .back-btn {
+            background-color: #ff7043;
+            color: white;
+            margin-top: 20px;
+            display: block;
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+        .back-btn:hover {
+            background-color: #ff8a65;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center">Generate CSV</h1>
+        <form action="/generate_csv" method="POST">
+            <div class="form-group">
+                <label for="api_key">API Key:</label>
+                <input type="text" class="form-control" id="api_key" name="api_key" value="{{ api_key }}" required>
+            </div>
+            <div class="form-group">
+                <label for="list_id">List ID:</label>
+                <input type="text" class="form-control" id="list_id" name="list_id" value="{{ list_id }}" required>
+            </div>
+            <div class="form-group">
+                <label for="cid_count">CID Count:</label>
+                <input type="number" class="form-control" id="cid_count" name="cid_count" value="{{ cid_count }}" required>
+            </div>
+            <div class="form-group">
+                <label for="max_events_per_cid">Max Events Per CID:</label>
+                <input type="number" class="form-control" id="max_events_per_cid" name="max_events_per_cid" value="{{ max_events_per_cid }}" required>
+            </div>
+            <button type="submit" class="btn btn-custom">Generate CSV</button>
+        </form>
+        <a href="/" class="back-btn">Back to Home</a>
+    </div>
+</body>
+</html>

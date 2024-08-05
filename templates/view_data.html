@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data View</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #ffcc80;
+            padding-top: 30px;
+            color: #333;
+        }
+        .container {
+            background: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.1);
+        }
+        .btn-block {
+            background-color: #ff7043;
+            color: white;
+            margin-bottom: 20px;
+        }
+        .btn-block:hover {
+            background-color: #ff8a65;
+        }
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+        table {
+            white-space: nowrap; /* 긴 텍스트를 한 줄로 보여줌 */
+            font-size: 14px; /* 폰트 크기 조정 */
+        }
+        th, td {
+            padding: 10px; /* 셀 여백 조정 */
+            text-align: center; /* 텍스트 정렬 */
+        }
+        .back-btn {
+            background-color: #ff7043;
+            color: white;
+            margin-bottom: 20px;
+            display: block;
+            width: 150px;
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+        .back-btn:hover {
+            background-color: #ff8a65;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center">Data Preview</h1>
+        <a href="/download_csv" class="btn btn-block">Download CSV</a>
+        <div class="table-container">
+            {{ tables|safe }}
+        </div>
+        <a href="/" class="back-btn">Back to Home</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main Page</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #ffcc80;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+        .container {
+            text-align: center;
+        }
+        .btn-custom {
+            background-color: #ff7043;
+            color: white;
+            margin: 15px;
+            width: 200px;
+            height: 50px;
+            font-size: 18px;
+            border: none;
+            border-radius: 5px;
+        }
+        .btn-custom:hover {
+            background-color: #ff8a65;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Data Management Tool</h1>
+        <a href="/generate_csv" class="btn btn-custom">Generate CSV</a>
+        <a href="/merge_data" class="btn btn-custom">Merge Data</a>
+    </div>
+</body>
+</html>
