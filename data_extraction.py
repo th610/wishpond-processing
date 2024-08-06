@@ -150,4 +150,5 @@ def map_data_to_dataframe(df, api_key, list_info, visitors_data, total_entries, 
     
     new_df = pd.DataFrame(rows, columns=df.columns)
     df = pd.concat([df, new_df], ignore_index=True)
+    
     return df
