@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_file, redirect, url_for, session, jsonify, after_this_request,Response
+from flask import Flask, render_template, request, send_file, redirect, url_for, session, jsonify, after_this_request, Response
 import os
 import webbrowser
 from threading import Timer
@@ -6,6 +6,9 @@ import pandas as pd
 from data_extraction import get_list_info, get_all_visitors_info, map_data_to_dataframe
 from data_merging import update_existing_dataset
 import time
+import requests 
+from requests.exceptions import RequestException, Timeout, ConnectionError
+from urllib.parse import urlparse
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -48,9 +51,24 @@ def generate_csv():
             start_time = time.time()
 
             for i, visitor in enumerate(visitors_data):
-                df = map_data_to_dataframe(df, api_key, list_info, [visitor], total_entries, max_events_per_cid)
+                try:
+                    df = map_data_to_dataframe(df, api_key, list_info, [visitor], total_entries, max_events_per_cid)
+                except Exception as e:
+                    if '504' in str(e):
+                        print("504 error occurred. Saving progress and retrying after a delay...")
+                        # 현재까지의 데이터를 저장
+                        if not os.path.exists(os.path.join(app.root_path, 'static')):
+                            os.makedirs(os.path.join(app.root_path, 'static'))
+                        csv_path = os.path.join(app.root_path, 'static', f'data_partial_{int(time.time())}.csv')
+                        df.to_csv(csv_path, index=False)
+                        print(f"Partial data saved to {csv_path}. Retrying after delay...")
+                        time.sleep(60)  # 60초 대기 후 재시도
+                        continue
+                    else:
+                        raise e
+
                 current_progress = int(((i + 1) / len(visitors_data)) * 100)
-                
+
                 # 예상 완료 시간 계산
                 elapsed_time = time.time() - start_time
                 estimated_total_time = (elapsed_time / (i + 1)) * len(visitors_data)
@@ -58,10 +76,11 @@ def generate_csv():
 
                 time.sleep(0.1)  # 데이터 처리 속도를 조절
 
+            # 최종 데이터를 저장
             if not os.path.exists(os.path.join(app.root_path, 'static')):
                 os.makedirs(os.path.join(app.root_path, 'static'))
 
-            csv_path = os.path.join(app.root_path,'static', f'data.csv')
+            csv_path = os.path.join(app.root_path, 'static', f'data.csv')
             df.to_csv(csv_path, index=False)
 
             current_progress = 100  # 작업 완료
@@ -74,6 +93,21 @@ def generate_csv():
 
     return render_template('generate_csv.html')
 
+def make_request_with_retries(url, headers, retries=3, delay=5):
+    """서버에 요청을 보내고, 실패 시 재시도하는 함수"""
+    attempt = 0
+    while attempt < retries:
+        try:
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()  # HTTP 오류가 발생하면 예외가 발생합니다.
+            return response
+        except (ConnectionError, Timeout, RequestException) as e:
+            print(f"Request failed: {e}. Retrying in {delay} seconds...")
+            attempt += 1
+            time.sleep(delay)
+    raise Exception(f"Failed to fetch data after {retries} attempts.")
+
+
 @app.route('/progress')
 def progress():
     global current_progress, estimated_time_remaining
@@ -81,7 +115,7 @@ def progress():
 
 @app.route('/view_data')
 def view_data():
-    df = pd.read_csv(os.path.join(app.root_path,'static', 'data.csv'))
+    df = pd.read_csv(os.path.join(app.root_path, 'static', 'data.csv'))
 
     for col in df.columns:
         if df[col].dtype == 'object':  # 문자열 타입인 경우에만 적용
@@ -94,7 +128,6 @@ def view_data():
 @app.route('/download_csv')
 def download_csv():
     return send_file(os.path.join(app.root_path, 'static', f'data.csv'))
-
 
 @app.route('/merge_data', methods=['GET', 'POST'])
 def merge_data():
@@ -131,5 +164,3 @@ def open_browser():
 if __name__ == '__main__':
     Timer(1, open_browser).start()
     app.run(debug=True)
-
-
