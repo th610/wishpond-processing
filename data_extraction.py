@@ -112,7 +112,7 @@ def map_data_to_dataframe(df, api_key, list_info, visitors_data, total_entries, 
 
             row = {col: None for col in df.columns}
             row['created_at1'] = list_info.get('created_at')
-            row['lead_count'] = list_info.get('lead_count')
+            row['lead_count'] = 0
             row['last_lead_activity'] = list_info.get('last_lead_activity')
             row['group_id'] = list_info.get('id')
             row['user_type'] = 'visitor'
@@ -131,17 +131,19 @@ def map_data_to_dataframe(df, api_key, list_info, visitors_data, total_entries, 
             row['cid'] = visitor.get('cid')
 
             properties = event.get('properties', {})
-            row['url'] = properties.get('url', None)
+            row['url'] = properties.get('url', properties.get('URL', None))
+
+            # UTM 정보가 properties에 있을 경우 각 컬럼에 추가
+            row['referrer'] = properties.get('referrer', properties.get('Referrer', None))
+            row['utm_source'] = properties.get('utm_source', None)
+            row['utm_medium'] = properties.get('utm_medium', None)
+            row['utm_campaign'] = properties.get('utm_campaign', None)
+            row['utm_term'] = properties.get('utm_term', None)
+            row['utm_content'] = properties.get('utm_content', None)
 
             if isinstance(row['value'], str) and ('http://' in row['value'] or 'https://' in row['value']):
                 row['url'] = row['value']
-
-            row['utm_source'] = None  
-            row['utm_medium'] = None
-            row['utm_campaign'] = None
-            row['utm_term'] = None
-            row['utm_content'] = None
-            
+                
             row['properties'] = event.get('properties', None)
             row['event_context'] = event.get('event_context', None)
             row['total_entries'] = total_entries
@@ -152,3 +154,4 @@ def map_data_to_dataframe(df, api_key, list_info, visitors_data, total_entries, 
     df = pd.concat([df, new_df], ignore_index=True)
     
     return df
+

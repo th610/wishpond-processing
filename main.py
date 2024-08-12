@@ -54,15 +54,21 @@ def generate_csv():
                 try:
                     df = map_data_to_dataframe(df, api_key, list_info, [visitor], total_entries, max_events_per_cid)
                 except Exception as e:
-                    if '504' in str(e):
-                        print("504 error occurred. Saving progress and retrying after a delay...")
+                    error_message = str(e)
+                    if '504' in error_message or '429' in error_message:
+                        print(f"{error_message} error occurred. Saving progress and retrying after a delay...")
                         # 현재까지의 데이터를 저장
                         if not os.path.exists(os.path.join(app.root_path, 'static')):
                             os.makedirs(os.path.join(app.root_path, 'static'))
                         csv_path = os.path.join(app.root_path, 'static', f'data_partial_{int(time.time())}.csv')
                         df.to_csv(csv_path, index=False)
                         print(f"Partial data saved to {csv_path}. Retrying after delay...")
-                        time.sleep(60)  # 60초 대기 후 재시도
+
+                        # 429 에러일 경우, 추가적인 대기 시간 설정
+                        if '429' in error_message:
+                            time.sleep(120)  # 2분 대기 후 재시도
+                        else:
+                            time.sleep(60)  # 60초 대기 후 재시도
                         continue
                     else:
                         raise e
@@ -92,21 +98,6 @@ def generate_csv():
             return jsonify({"status": "error", "message": str(e)})
 
     return render_template('generate_csv.html')
-
-def make_request_with_retries(url, headers, retries=3, delay=5):
-    """서버에 요청을 보내고, 실패 시 재시도하는 함수"""
-    attempt = 0
-    while attempt < retries:
-        try:
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()  # HTTP 오류가 발생하면 예외가 발생합니다.
-            return response
-        except (ConnectionError, Timeout, RequestException) as e:
-            print(f"Request failed: {e}. Retrying in {delay} seconds...")
-            attempt += 1
-            time.sleep(delay)
-    raise Exception(f"Failed to fetch data after {retries} attempts.")
-
 
 @app.route('/progress')
 def progress():
@@ -164,3 +155,5 @@ def open_browser():
 if __name__ == '__main__':
     Timer(1, open_browser).start()
     app.run(debug=True)
+
+

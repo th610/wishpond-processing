@@ -20,6 +20,7 @@ def map_main_domain_to_id(df):
     return main_domains_and_paths.map(domain_to_id)
     
 def update_existing_dataset(df_existing, df_new):
+
     df_new = df_new.rename(columns=str.strip)
     df_new = df_new.dropna(subset=['url'])
 
@@ -31,7 +32,7 @@ def update_existing_dataset(df_existing, df_new):
     columns_to_update = ['category', 'industry', 'interest', 'name', 
                          'offer_category', 'offer_product', 'offer_price', 
                          'offer_created_at', 'utm_source', 'utm_medium', 
-                         'utm_campaign', 'utm_term', 'utm_content', 'url']
+                         'utm_campaign', 'utm_term', 'utm_content', 'url','refferr']
 
     # 도메인 ID가 df_new['id']에 존재하지 않는 행들을 처리하기 위한 설정
     domain_id_counts = df_existing['domain_id'].value_counts()
@@ -71,6 +72,7 @@ def update_existing_dataset(df_existing, df_new):
             for col in columns_to_update:
                 if col in matching_row and pd.notna(matching_row[col]):
                     df_existing.at[index, col] = matching_row[col]
+
     df_existing.drop(columns=['domain_id'], inplace=True)
 
     return df_existing
