@@ -35,17 +35,38 @@ def rate_limit(func):
     wrapper.total_time = 0
     return wrapper
 
+
 @rate_limit
 def get_list_info(api_key, list_id):
     list_url = f'https://api.wishpond.com/api/v1/lists/{list_id}'
     headers = {
         'X-Api-Token': api_key
     }
-    response = requests.get(list_url, headers=headers)
-    if response.status_code == 200:
-        return response.json()['list']
-    else:
-        raise Exception(f'Error fetching list info: {response.status_code} - {response.text}')
+    retries = 0
+    max_retries = 5
+    wait_time = 60  # 1분 대기
+
+    while retries < max_retries:
+        try:
+            response = requests.get(list_url, headers=headers)
+            response.raise_for_status()  # HTTP 오류가 발생하면 예외가 발생합니다.
+
+            if response.status_code == 200:
+                return response.json()['list']
+            else:
+                raise Exception(f'Unexpected error: {response.status_code} - {response.text}')
+        
+        except requests.exceptions.HTTPError as e:
+            if response.status_code == 429:
+                print(f"429 Rate Limit Exceeded. Waiting {wait_time} seconds before retrying...")
+                time.sleep(wait_time)
+                retries += 1
+            else:
+                raise Exception(f'Error fetching list info: {response.status_code} - {response.text}')
+    
+    raise Exception(f"Failed to fetch list info after {max_retries} attempts due to rate limits.")
+
+
 
 @rate_limit
 def get_all_visitors_info(api_key, list_id, max_cid_count):
@@ -97,8 +118,11 @@ def get_all_visitor_events(api_key, visitor_id, max_events_per_cid):
     
     return all_events[:max_events_per_cid]
 
-def map_data_to_dataframe(df, api_key, list_info, visitors_data, total_entries, max_events_per_cid):
+def map_data_to_dataframe_data(df, api_key, list_info, visitors_data, total_entries, max_events_per_cid):
     rows = []
+    unique_key_mapping = {}
+    unique_key_counter = 1  # 고유 번호를 매기기 위한 카운터
+
     for visitor in visitors_data:
         visitor_id = visitor.get('id')
 
@@ -111,47 +135,58 @@ def map_data_to_dataframe(df, api_key, list_info, visitors_data, total_entries, 
                 continue
 
             row = {col: None for col in df.columns}
-            row['created_at1'] = list_info.get('created_at')
-            row['lead_count'] = 0
-            row['last_lead_activity'] = list_info.get('last_lead_activity')
-            row['group_id'] = list_info.get('id')
-            row['user_type'] = 'visitor'
-            
-            row['lead_score'] = visitor.get('lead_score')
-            row['geoip_country'] = dynamic_attributes.get('geoip_country')
-            row['geoip_state'] = dynamic_attributes.get('geoip_state')
-            row['geoip_city'] = dynamic_attributes.get('geoip_city')
-            
-            row['created_at'] = visitor.get('created_at')
-            row['id'] = event.get('id')
-            row['key'] = event.get('key', None)
-            row['value'] = event.get('value', None)
+
+            # 변환된 컬럼 이름에 맞게 데이터 할당
+            row['list_id'] = list_info.get('id')
+            row['list_date'] = list_info.get('created_at')  # 사용자 정보
+            row['score'] = visitor.get('lead_score')
+            row['id'] = visitor.get('cid')
+            row['user_type'] = "visitor"
+            row['segment'] = '제품'
+            row['industry'] = '패션'
+            row['marketing_goal'] = '브랜드 인지도'
+            row['marketing_funnel'] = '구매 유도'
+            row['marketing_title'] = '프로모션 페이지'
+            row['special_offer'] = '할인 쿠폰'
+            row['interest'] = '여성 의류'
+            row['activity'] = '이벤트'
+            row['data_type'] = '사용자 행동 분석'
+            row['item_name'] = '사용자 프로모션 방문완료'
+
+            row['transaction_date'] = event.get('created_at')
+            row['transaction_id'] = event.get('id')
+            transaction_key = event.get('key', None)
+            row['transaction_value'] = event.get('value', None)
             row['source'] = event.get('source', None)
 
-            row['cid'] = visitor.get('cid')
+            # 유니크한 transaction_key에 대해 고유 번호 할당
+            if transaction_key not in unique_key_mapping:
+                unique_key_mapping[transaction_key] = unique_key_counter
+                unique_key_counter += 1
+
+            # 각 행에 고유 번호 매핑
+            row['transaction_key'] = unique_key_mapping[transaction_key]
+
+            # 나머지 필드들에 대한 추가 처리
+            row['payment_category'] = None
+            row['payment_product'] = None
+            row['payment_price'] = None
+            row['payment_date'] = None
 
             properties = event.get('properties', {})
-            row['url'] = properties.get('url', properties.get('URL', None))
-
-            # UTM 정보가 properties에 있을 경우 각 컬럼에 추가
+            row['address'] = properties.get('url', properties.get('URL', None))
             row['referrer'] = properties.get('referrer', properties.get('Referrer', None))
-            row['utm_source'] = properties.get('utm_source', None)
-            row['utm_medium'] = properties.get('utm_medium', None)
-            row['utm_campaign'] = properties.get('utm_campaign', None)
-            row['utm_term'] = properties.get('utm_term', None)
-            row['utm_content'] = properties.get('utm_content', None)
 
-            if isinstance(row['value'], str) and ('http://' in row['value'] or 'https://' in row['value']):
-                row['url'] = row['value']
-                
-            row['properties'] = event.get('properties', None)
-            row['event_context'] = event.get('event_context', None)
-            row['total_entries'] = total_entries
-            
+            # UTM 파라미터 매핑
+            row['utm_source'] = properties.get('utm_source')  
+            row['utm_medium'] = properties.get('utm_medium')
+            row['utm_campaign'] = properties.get('utm_campaign')
+            row['utm_term'] = properties.get('utm_term')
+            row['utm_content'] = properties.get('utm_content')
+
             rows.append(row)
     
     new_df = pd.DataFrame(rows, columns=df.columns)
     df = pd.concat([df, new_df], ignore_index=True)
     
     return df
-

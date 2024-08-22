@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generate CSV</title>
+    <title>Data</title>
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            background-color: #42a5f5; /* 파란색 배경 */
+            background-color: #5e60ad;
             padding-top: 30px;
             color: #333;
         }
@@ -19,17 +19,17 @@
             max-width: 600px;
         }
         .btn-custom {
-            background-color: #ff7043;
+            background-color: #49b8fd;
             color: white;
             margin-top: 20px;
             width: 100%;
             border-radius: 5px;
         }
         .btn-custom:hover {
-            background-color: #ff8a65;
+            background-color: #49b8fd;
         }
         .back-btn {
-            background-color: #ff7043;
+            background-color: #49b8fd;
             color: white;
             margin-top: 20px;
             display: block;
@@ -39,7 +39,7 @@
             text-decoration: none;
         }
         .back-btn:hover {
-            background-color: #ff8a65;
+            background-color: #49b8fd;
         }
         .loading-overlay {
             display: none;
@@ -59,8 +59,8 @@
 </head>
 <body>
     <div class="container">
-        <h1 class="text-center">Generate CSV</h1>
-        <form id="csvForm" action="/generate_csv" method="POST">
+        <h1 class="text-center">data</h1>
+        <form id="csvForm" action="/generate_csv_data" method="POST">
             <div class="form-group">
                 <label for="api_key">API Key:</label>
                 <input type="text" class="form-control" id="api_key" name="api_key" required>
@@ -99,7 +99,7 @@
                 $('.loading-overlay').show(); // 로딩 화면 표시
 
                 $.ajax({
-                    url: '/generate_csv',
+                    url: '/generate_csv_data',
                     type: 'POST',
                     data: $(this).serialize(),
                     success: function(response){
