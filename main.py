@@ -6,11 +6,14 @@ import pandas as pd
 from frients_data_extraction import get_list_info, get_all_visitors_info, map_data_to_dataframe_frients
 from data_data_extraction import map_data_to_dataframe_data
 from accepted_data_extraction import  map_data_to_dataframe_accepted
+from source_data_extraction import  map_data_to_dataframe_source
+from idlookup_data_extraction import  map_data_to_dataframe_idlookup
 from data_merging import update_existing_dataset
 import time
 import requests 
 from requests.exceptions import RequestException, Timeout, ConnectionError
 from urllib.parse import urlparse
+from utils import *
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -24,6 +27,7 @@ def index():
         'api_key': session.get('api_key', ''),
         'list_id': session.get('list_id', ''),
         'cid_count': session.get('cid_count', 10),
+        'cid_id': session.get('cid_id', ''),        
         'max_events_per_cid': session.get('max_events_per_cid', 10)
     }
     return render_template('index.html', previous_values=previous_values)
@@ -38,12 +42,32 @@ def generate_csv_frients():
         cid_count = int(request.form['cid_count'])
         max_events_per_cid = int(request.form['max_events_per_cid'])
 
+        # # 원본
+        # columns = [
+        # 'category', 'industry', 'campaign_objective', 'campaign_type', 'campaign_name', 'campaign_freeoffer', 'interest', 
+        # 'objective', 'type', 'name', 'list_id', 'list_created_at', 'status', 'lead_count', 'last_lead_activity', 
+        # 'backmatch_visitors', 'created_at', 'event_id', 'key', 'value', 'source', 'purchase_category', 'purchase_product', 
+        # 'purchase_price', 'purchase_created_at', 'url', 'referrer', 'utm_source', 'utm_medium', 
+        # 'utm_campaign', 'utm_term', 'utm_content', 'user_type', 'lead_score', 'cid'
+        # ]
+
+        # 소스 데이터
+        # columns = [
+        # 'category', 'industry', 'campaign_objective', 'campaign_type', 'campaign_name', 'campaign_freeoffer', 'interest', 
+        # 'objective', 'type', 'name', 'list_id', 'list_created_at', 'status', 'lead_count', 'last_lead_activity', 
+        # 'backmatch_visitors', 'created_at', 'event_id', 'key', 'value', 'source', 'purchase_category', 'purchase_product', 
+        # 'purchase_price', 'purchase_created_at', 'url', 'referrer', 'utm_source', 'utm_medium', 
+        # 'utm_campaign', 'utm_term', 'utm_content', 'user_type', 'lead_score', 'cid',"mid","email","status","subscribed"
+        # ,"event_context","page_title","product","ip_address","category1"
+        # ]
+
+        # 소스 데이터 20241104
         columns = [
         'category', 'industry', 'campaign_objective', 'campaign_type', 'campaign_name', 'campaign_freeoffer', 'interest', 
         'objective', 'type', 'name', 'list_id', 'list_created_at', 'status', 'lead_count', 'last_lead_activity', 
-        'backmatch_visitors', 'created_at', 'event_id', 'key', 'value', 'source', 'purchase_category', 'purchase_product', 
+        'backmatch_visitors', 'created_at', 'event_id', 'event_key', 'event_value', 'source', 'purchase_category', 'purchase_product', 
         'purchase_price', 'purchase_created_at', 'url', 'referrer', 'utm_source', 'utm_medium', 
-        'utm_campaign', 'utm_term', 'utm_content', 'user_type', 'lead_score', 'cid'
+        'utm_campaign', 'utm_term', 'utm_content', 'user_type', 'lead_score',"Gender","Age","Region", 'cid'
         ]
 
         df = pd.DataFrame(columns=columns)
@@ -105,14 +129,25 @@ def generate_csv_data():
         cid_count = int(request.form['cid_count'])
         max_events_per_cid = int(request.form['max_events_per_cid'])
 
+        # columns = [
+        #     'id','transaction_id','list_id', 'list_date', 'score', 'user_type', 'segment', 'industry', 'marketing_goal', 
+        #     'marketing_funnel', 'marketing_title', 'special_offer', 'interest', 'activity', 
+        #     'data_type', 'item_name', 'transaction_date',  'transaction_key', 
+        #     'transaction_value', 'source', 'payment_category', 'payment_product', 
+        #     'payment_price', 'payment_date', 'address', 'referrer', 'utm_source', 
+        #     'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'
+        # ]   
+        
+        # 소스 컬럼
         columns = [
-            'list_id', 'list_date', 'score','id', 'user_type', 'segment', 'industry', 'marketing_goal', 
+            'id','transaction_id','list_id', 'list_date', 'score', 'user_type', 'segment', 'industry', 'marketing_goal', 
             'marketing_funnel', 'marketing_title', 'special_offer', 'interest', 'activity', 
-            'data_type', 'item_name', 'transaction_date', 'transaction_id', 'transaction_key', 
+            'data_type', 'item_name', 'transaction_date',  'transaction_key', 
             'transaction_value', 'source', 'payment_category', 'payment_product', 
             'payment_price', 'payment_date', 'address', 'referrer', 'utm_source', 
-            'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'
-        ]   
+            'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',"m","e-mail","position","sub"
+             ,"event_context","title","good","ip","cate"
+        ]
 
         df = pd.DataFrame(columns=columns)
 
@@ -174,15 +209,29 @@ def generate_csv_accepted():
         cid_count = int(request.form['cid_count'])
         max_events_per_cid = int(request.form['max_events_per_cid'])
 
+
+        #  원본데이터
+        # columns = [
+        #         'customer_id','event_id','event_created_timestamp', 'member_type', 
+        #         'customer_category', 'industry_field', 'ad_objective', 'marketing_stage', 'campaign_title', 
+        #         'free_offer', 'interest_field', 'key_activity', 'data_type', 'item_name', 
+        #           'event_key', 'event_value', 'data_source', 
+        #         'purchase_category', 'purchase_product_name', 'purchase_cost', 'purchase_timestamp', 
+        #         'website_url', 'source_channel', 'utm_source', 'utm_medium', 'ad_campaign', 
+        #         'target_keyword', 'content_description', 'customer_list_id', 'list_created_timestamp'
+        #     ]
+        
+        #소스데이터
         columns = [
                 'customer_id','event_id','event_created_timestamp', 'member_type', 
                 'customer_category', 'industry_field', 'ad_objective', 'marketing_stage', 'campaign_title', 
                 'free_offer', 'interest_field', 'key_activity', 'data_type', 'item_name', 
-                  'event_key', 'event_value', 'data_source', 
+                  'event_key', 'event_value', 'data_source', "mid_value","email","status","sub_type"
+                  ,"properties","context","page_name","product","ip",
                 'purchase_category', 'purchase_product_name', 'purchase_cost', 'purchase_timestamp', 
                 'website_url', 'source_channel', 'utm_source', 'utm_medium', 'ad_campaign', 
                 'target_keyword', 'content_description', 'customer_list_id', 'list_created_timestamp'
-            ]
+        ]
 
         df = pd.DataFrame(columns=columns)
 
@@ -234,6 +283,162 @@ def generate_csv_accepted():
 
     return render_template('generate_csv_accepted.html')
 
+@app.route('/generate_csv_source', methods=['GET', 'POST'])
+def generate_csv_source():
+    global current_progress, estimated_time_remaining
+    if request.method == 'POST':
+        api_key = request.form['api_key']
+        list_id = request.form['list_id']
+        cid_count = int(request.form['cid_count'])
+        max_events_per_cid = int(request.form['max_events_per_cid'])
+
+        # # 원본
+        # columns = [
+        # 'category', 'industry', 'campaign_objective', 'campaign_type', 'campaign_name', 'campaign_freeoffer', 'interest', 
+        # 'objective', 'type', 'name', 'list_id', 'list_created_at', 'status', 'lead_count', 'last_lead_activity', 
+        # 'backmatch_visitors', 'created_at', 'event_id', 'key', 'value', 'source', 'purchase_category', 'purchase_product', 
+        # 'purchase_price', 'purchase_created_at', 'url', 'referrer', 'utm_source', 'utm_medium', 
+        # 'utm_campaign', 'utm_term', 'utm_content', 'user_type', 'lead_score', 'cid'
+        # ]
+
+        # 소스 데이터
+        columns = [
+        'category', 'industry', 'campaign_objective', 'campaign_type', 'campaign_name', 'campaign_freeoffer', 'interest', 
+        'objective', 'type', 'name', 'list_id', 'list_created_at', 'status', 'lead_count', 'last_lead_activity', 
+        'backmatch_visitors', 'created_at', 'event_id', 'key', 'value', 'source', 'purchase_category', 'purchase_product', 
+        'purchase_price', 'purchase_created_at', 'url', 'referrer',"properties", 'utm_source', 'utm_medium', 
+        'utm_campaign', 'utm_term', 'utm_content', 'user_type', 'lead_score', 'cid',"mid","email","status","subscribed"
+        ,"event_context","page_title","product","ip_address"
+        ]
+
+        # 소스 데이터 20241104
+        # columns = [
+        # 'category', 'industry', 'campaign_objective', 'campaign_type', 'campaign_name', 'campaign_freeoffer', 'interest', 
+        # 'objective', 'type', 'name', 'list_id', 'list_created_at', 'status', 'lead_count', 'last_lead_activity', 
+        # 'backmatch_visitors', 'created_at', 'event_id', 'event_key', 'event_value', 'source', 'purchase_category', 'purchase_product', 
+        # 'purchase_price', 'purchase_created_at', 'url', 'referrer', 'utm_source', 'utm_medium', 
+        # 'utm_campaign', 'utm_term', 'utm_content', 'user_type', 'lead_score',"Gender","Age","Region", 'cid'
+        # ]
+
+        df = pd.DataFrame(columns=columns)
+
+        try:
+            list_info = get_list_info(api_key, list_id)
+            visitors_data, total_entries = get_all_visitors_info(api_key, list_id, cid_count)
+            start_time = time.time()
+
+            for i, visitor in enumerate(visitors_data):
+                try:
+                    df = map_data_to_dataframe_source(df, api_key, list_info, [visitor], total_entries, max_events_per_cid)
+                except Exception as e:
+                    if '504' in str(e):
+                        print("504 error occurred. Saving progress and retrying after a delay...")
+                        # 현재까지의 데이터를 저장
+                        if not os.path.exists(os.path.join(app.root_path, 'static')):
+                            os.makedirs(os.path.join(app.root_path, 'static'))
+                        csv_path = os.path.join(app.root_path, 'static', f'data_partial_{int(time.time())}.csv')
+                        df.to_csv(csv_path, index=False)
+                        print(f"Partial data saved to {csv_path}. Retrying after delay...")
+                        time.sleep(60)  # 60초 대기 후 재시도
+                        continue
+                    else:
+                        raise e
+
+                current_progress = int(((i + 1) / len(visitors_data)) * 100)
+
+                # 예상 완료 시간 계산
+                elapsed_time = time.time() - start_time
+                estimated_total_time = (elapsed_time / (i + 1)) * len(visitors_data)
+                estimated_time_remaining = int(estimated_total_time - elapsed_time)
+
+                time.sleep(0.1)  # 데이터 처리 속도를 조절
+
+            # 최종 데이터를 저장
+            if not os.path.exists(os.path.join(app.root_path, 'static')):
+                os.makedirs(os.path.join(app.root_path, 'static'))
+
+            csv_path = os.path.join(app.root_path, 'static', f'data.csv')
+            df.to_csv(csv_path, index=False)
+
+            current_progress = 100  # 작업 완료
+            estimated_time_remaining = 0
+
+            return jsonify({"status": "success"})
+        
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)})
+
+    return render_template('generate_csv_source.html')
+
+
+
+
+@app.route('/generate_csv_idlookup', methods=['GET', 'POST'])
+def generate_csv_idlookup():
+    global current_progress, estimated_time_remaining
+    if request.method == 'POST':
+        api_key = request.form['api_key']
+        list_id = request.form['list_id']
+        cid_id = request.form['cid_id']  # 문자열 형태의 CID ID를 받음
+        max_events_per_cid = int(request.form['max_events_per_cid'])
+
+        # 데이터 컬럼 정의
+        columns = [
+            'category', 'industry', 'campaign_objective', 'campaign_type', 'campaign_name', 'campaign_freeoffer', 'interest', 
+            'objective', 'type', 'name', 'list_id', 'list_created_at', 'status', 'lead_count', 'last_lead_activity', 
+            'backmatch_visitors', 'created_at', 'event_id', 'key', 'value', 'source', 'purchase_category', 'purchase_product', 
+            'purchase_price', 'purchase_created_at', 'url', 'referrer', "properties", 'utm_source', 'utm_medium', 
+            'utm_campaign', 'utm_term', 'utm_content', 'user_type', 'lead_score', 'cid', "mid", "email", "status", "subscribed",
+            "event_context", "page_title", "product", "ip_address"
+        ]
+        df = pd.DataFrame(columns=columns)
+
+        try:
+            # list 정보 가져오기
+            list_info = get_list_info(api_key, list_id)
+            
+            # 특정 CID ID의 방문자 정보 조회
+            visitor_data = get_specific_visitor_info(api_key, list_id, cid_id)
+            total_entries = 1  # 단일 CID 조회이므로 총 항목 수는 1
+
+            start_time = time.time()
+
+            # 특정 CID에 대한 이벤트 데이터 가져오기
+            try:
+                # `map_data_to_dataframe_idlookup` 함수로 데이터 매핑 및 DataFrame 업데이트
+                df = map_data_to_dataframe_idlookup(df, api_key, list_info, [visitor_data], total_entries, cid_id)
+            except Exception as e:
+                if '504' in str(e):
+                    print("504 error occurred. Saving progress and retrying after a delay...")
+                    # 중간 데이터를 저장
+                    if not os.path.exists(os.path.join(app.root_path, 'static')):
+                        os.makedirs(os.path.join(app.root_path, 'static'))
+                    csv_path = os.path.join(app.root_path, 'static', f'data_partial_{int(time.time())}.csv')
+                    df.to_csv(csv_path, index=False)
+                    print(f"Partial data saved to {csv_path}. Retrying after delay...")
+                    time.sleep(60)  # 60초 대기 후 재시도
+                    # 이후 필요한 경우 다시 `map_data_to_dataframe_idlookup`을 호출하거나, 흐름을 제어할 수 있음
+                else:
+                    raise e
+
+
+            current_progress = 100  # 작업 완료
+            estimated_time_remaining = 0
+
+            # 최종 데이터를 저장
+            if not os.path.exists(os.path.join(app.root_path, 'static')):
+                os.makedirs(os.path.join(app.root_path, 'static'))
+
+            csv_path = os.path.join(app.root_path, 'static', f'data.csv')
+            df.to_csv(csv_path, index=False)
+
+            return jsonify({"status": "success"})
+        
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)})
+
+    return render_template('generate_csv_idlookup.html')
+
 
 
 
@@ -262,12 +467,32 @@ def view_data():
     df = pd.read_csv(os.path.join(app.root_path, 'static', 'data.csv'))
 
     for col in df.columns:
-        if df[col].dtype == 'object':  # 문자열 타입인 경우에만 적용
+        if df[col].dtype == 'object':
             df[col] = df[col].map(lambda x: x.replace('\n', ' ') if isinstance(x, str) else x)
 
-    table_html = df.head().to_html(classes='table table-striped table-bordered table-hover')
+    row_count = len(df)
+    col_count = len(df.columns)
+    columns = df.columns.tolist()
 
-    return render_template('view_data.html', tables=table_html)
+    return render_template('view_data.html', row_count=row_count, col_count=col_count, columns=columns)
+
+
+@app.route('/load_data')
+def load_data():
+    page = int(request.args.get('page', 1))
+    per_page = 100
+    df = pd.read_csv(os.path.join(app.root_path, 'static', 'data.csv'))
+
+    start = (page - 1) * per_page
+    end = start + per_page
+    df_subset = df[start:end]
+
+    # 실제 데이터 길이에 맞게 인덱스 재설정
+    df_subset.index = range(start + 1, start + 1 + len(df_subset))
+
+    data = df_subset.to_html(header=False, index=True, classes='table table-striped table-bordered table-hover')
+    return jsonify({'data': data})
+
 
 @app.route('/download_csv')
 def download_csv():
